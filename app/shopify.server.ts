@@ -8,6 +8,11 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 
 import prisma from "./db.server";
+import { assertRequiredEnv } from "./env.server";
+
+// Fail fast with an actionable message if credentials are missing, rather than
+// letting the Shopify library throw from deep inside its own stack.
+assertRequiredEnv();
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,

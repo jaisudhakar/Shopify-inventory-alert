@@ -175,7 +175,7 @@ with the reason, so you can always see what happened.
 The logic is fully testable on its own, no store and no mail server required:
 
 ```bash
-npm test        # 63 tests
+npm test        # 70 tests
 npm run typecheck
 npm run build
 ```
@@ -252,7 +252,7 @@ changes are needed.
 ## Tests
 
 ```bash
-npm test        # 63 tests, no Shopify store or mail server required
+npm test        # 70 tests, no Shopify store or mail server required
 npm run typecheck
 npm run build
 ```
@@ -267,6 +267,7 @@ The suites cover the parts that are expensive to get wrong:
 | `tests/settings.test.ts` | Validation of the threshold, recipients, send time, and timezone. |
 | `tests/time.test.ts` | Timezone conversion and next-send calculation. |
 | `tests/mailer.test.ts` | Provider selection, the console fallback, and provider-rejection errors. |
+| `tests/env.test.ts` | The startup check that names missing credentials. |
 
 ---
 
@@ -294,6 +295,37 @@ app/
     webhooks.app.*.tsx          uninstall + scope updates
 prisma/schema.prisma            Session, AlertSetting, AlertRun
 ```
+
+---
+
+## Troubleshooting
+
+**`Cannot initialize Shopify API Library. Missing values for: apiSecretKey, apiKey`**
+
+`npm start` needs a `.env` file in the project root — unlike `npm run dev`,
+where the Shopify CLI supplies the credentials for you. Create one and fill in
+`SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, and `SHOPIFY_APP_URL`:
+
+```bash
+cp .env.example .env
+```
+
+Get the key and secret from Partner Dashboard → your app → Configuration
+(Client ID and Client secret). Real environment variables take precedence over
+the file, so a hosted deployment that sets them directly needs no `.env`.
+
+**`curl: (7) Failed to connect to localhost port 3000`**
+
+Under `npm run dev` the Shopify CLI chooses its own local port and serves the
+app on the tunnel URL it prints at startup — nothing listens on 3000. Use
+**Send digest now** in the app, or `npm run alert:run` with `SHOPIFY_APP_URL`
+set to the tunnel URL. `localhost:3000` is correct only for `npm start`.
+
+**The digest never arrives**
+
+Check the **History** page: every attempt is recorded there with its reason.
+The common ones are alerts switched off, no recipients configured, and
+`skipWhenEmpty` suppressing the email because nothing is actually low.
 
 ---
 
