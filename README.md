@@ -134,21 +134,41 @@ The Settings page shows which provider is active and warns you if none is.
 
 ### Step 5 — Test the morning schedule without waiting until morning
 
-Set the send time to a few minutes from now on the Settings page. The scheduler
-ticks every 5 minutes, so the digest arrives on the next tick after that time.
+The simplest way is the **Send digest now** button on the Overview page — it
+runs the exact same code the scheduler runs, with no ports or URLs involved.
 
-To trigger it immediately instead, add `CRON_SECRET=some-secret` to `.env`,
-restart, and run:
+To test the *timing* too, set the send time on the Settings page to a few
+minutes from now. The scheduler ticks every 5 minutes, so the digest goes out on
+the first tick after that time.
+
+To fire it from the command line, add a secret to `.env`, restart the app, then:
 
 ```bash
-curl -X POST "http://localhost:3000/api/cron/daily?shop=YOUR-STORE.myshopify.com" \
-     -H "Authorization: Bearer some-secret"
+npm run alert:run                            # every store whose send time has arrived
+npm run alert:run -- YOUR-STORE.myshopify.com   # one store, right now
 ```
+
+```bash
+# in .env
+CRON_SECRET=any-random-string
+```
+
+`npm run alert:run` reads `SHOPIFY_APP_URL` and `CRON_SECRET` out of `.env`
+itself, so there is nothing to export.
+
+> **Careful with the URL.** When you run `npm run dev`, the Shopify CLI picks its
+> own local port and serves the app on a **tunnel URL** it prints at startup
+> (`https://....trycloudflare.com`). It is *not* on `http://localhost:3000`, and
+> curling that address gives you `Failed to connect to localhost port 3000`.
+> Set `SHOPIFY_APP_URL` in `.env` to whichever of these applies:
+>
+> | How you started it | `SHOPIFY_APP_URL` |
+> | --- | --- |
+> | `npm run dev` | the tunnel URL the CLI printed |
+> | `npm run build && npm start` | `http://localhost:3000` |
 
 Every attempt — sent, skipped, or failed — is recorded on the **History** page
 with the reason, so you can always see what happened.
-
----
 
 ### Running without a Shopify store
 
@@ -193,15 +213,17 @@ curl -X POST https://your-app.example.com/api/cron/daily \
      -H "Authorization: Bearer $CRON_SECRET"
 ```
 
+Use the app's real public URL here, the same value as `SHOPIFY_APP_URL`.
+
 Point any scheduler at that URL every 5–15 minutes; it sends only to the shops
-whose local send time has arrived. `scripts/run-alerts.mjs` wraps the same call:
+whose local send time has arrived. `npm run alert:run` wraps the same call and
+reads both values from `.env`:
 
 ```bash
-SHOPIFY_APP_URL=https://your-app.example.com CRON_SECRET=... \
-  node scripts/run-alerts.mjs
+npm run alert:run
 
 # force one store immediately, ignoring its send time
-node scripts/run-alerts.mjs demo.myshopify.com
+npm run alert:run -- demo.myshopify.com
 ```
 
 **Sending exactly once** is enforced in the data, not the timer: each shop
