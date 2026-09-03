@@ -7,11 +7,18 @@ import { isbot } from "isbot";
 
 import { addDocumentResponseHeaders } from "./shopify.server";
 import { startScheduler } from "./services/scheduler.server";
+import { logStartupSummary } from "./services/startup.server";
 
 export const streamTimeout = 5000;
 
 // Boot the daily digest scheduler with the server process.
 startScheduler();
+
+// Report what the server will actually do, so a silent process is not
+// mistaken for a working one. Never let a logging failure stop startup.
+logStartupSummary().catch((error) => {
+  console.error("[inventory-alert] could not print startup summary:", error);
+});
 
 export default async function handleRequest(
   request: Request,

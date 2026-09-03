@@ -175,7 +175,7 @@ with the reason, so you can always see what happened.
 The logic is fully testable on its own, no store and no mail server required:
 
 ```bash
-npm test        # 70 tests
+npm test        # 73 tests
 npm run typecheck
 npm run build
 ```
@@ -189,7 +189,7 @@ npm run build
 | `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` | From the Partner Dashboard. `npm run dev` injects these for you locally; set them explicitly in production. |
 | `SHOPIFY_APP_URL` | Public HTTPS URL of the app. Used for OAuth and for the settings link in the email. |
 | `SCOPES` | `read_products,read_inventory,read_locations` |
-| `DATABASE_URL` | SQLite by default (`file:./prisma/dev.sqlite`). |
+| `DATABASE_URL` | SQLite by default — `file:./dev.sqlite`, which Prisma resolves relative to `prisma/schema.prisma`, so the file lands at `prisma/dev.sqlite`. |
 | `EMAIL_PROVIDER` | `smtp`, `resend`, `sendgrid`, or `console`. Auto-detected from whichever credentials are present. |
 | `EMAIL_FROM` | e.g. `Inventory Alerts <alerts@your-domain.com>` |
 | `ENABLE_SCHEDULER` | `true` (default) runs the digest in-process. Set `false` to drive it externally — see below. |
@@ -252,7 +252,7 @@ changes are needed.
 ## Tests
 
 ```bash
-npm test        # 70 tests, no Shopify store or mail server required
+npm test        # 73 tests, no Shopify store or mail server required
 npm run typecheck
 npm run build
 ```
@@ -268,6 +268,7 @@ The suites cover the parts that are expensive to get wrong:
 | `tests/time.test.ts` | Timezone conversion and next-send calculation. |
 | `tests/mailer.test.ts` | Provider selection, the console fallback, and provider-rejection errors. |
 | `tests/env.test.ts` | The startup check that names missing credentials. |
+| `tests/startup.test.ts` | Detecting an app URL Shopify cannot reach. |
 
 ---
 
@@ -320,6 +321,17 @@ Under `npm run dev` the Shopify CLI chooses its own local port and serves the
 app on the tunnel URL it prints at startup — nothing listens on 3000. Use
 **Send digest now** in the app, or `npm run alert:run` with `SHOPIFY_APP_URL`
 set to the tunnel URL. `localhost:3000` is correct only for `npm start`.
+
+**`npm start` runs but nothing happens**
+
+That is `npm start` working — it is a web server, so it starts and waits. The
+question is whether any store has installed the app. On boot the server now
+prints a summary saying exactly that, and what to do about it.
+
+`npm start` cannot install the app on a store: Shopify has to reach your server
+over public HTTPS, and it cannot reach `localhost`. **Use `npm run dev` for
+development** — it opens a tunnel, installs the app on your development store,
+and prints a link to open it. `npm start` is for a deployed server.
 
 **The digest never arrives**
 

@@ -6,11 +6,11 @@ node_modules
 .env.*
 !.env.example
 
-# Prisma / SQLite
+# Prisma / SQLite (patterns without a slash match at any depth)
 *.sqlite
 *.sqlite-journal
+*.sqlite3
 *.db
-prisma/*.sqlite*
 
 # Shopify CLI
 .shopify
