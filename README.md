@@ -175,7 +175,7 @@ with the reason, so you can always see what happened.
 The logic is fully testable on its own, no store and no mail server required:
 
 ```bash
-npm test        # 73 tests
+npm test        # 83 tests
 npm run typecheck
 npm run build
 ```
@@ -235,7 +235,7 @@ because a "morning" digest arriving at 9 PM is worse than none.
 
 ---
 
-## Deploying
+## Deploying and publishing
 
 ```bash
 docker build -t inventory-alert .
@@ -247,12 +247,17 @@ For anything beyond a single instance, switch `prisma/schema.prisma` to
 container is lost on every redeploy, taking the OAuth sessions with it. No model
 changes are needed.
 
+**See [PUBLISHING.md](PUBLISHING.md)** for getting the app onto a real store:
+custom distribution (one store, no review), unlisted, or a full Shopify App
+Store listing — plus the production checklist and what App Store review still
+requires.
+
 ---
 
 ## Tests
 
 ```bash
-npm test        # 73 tests, no Shopify store or mail server required
+npm test        # 83 tests, no Shopify store or mail server required
 npm run typecheck
 npm run build
 ```
@@ -269,6 +274,7 @@ The suites cover the parts that are expensive to get wrong:
 | `tests/mailer.test.ts` | Provider selection, the console fallback, and provider-rejection errors. |
 | `tests/env.test.ts` | The startup check that names missing credentials. |
 | `tests/startup.test.ts` | Detecting an app URL Shopify cannot reach. |
+| `tests/compliance.test.ts` | That the three mandatory compliance webhooks stay declared and verified. |
 
 ---
 

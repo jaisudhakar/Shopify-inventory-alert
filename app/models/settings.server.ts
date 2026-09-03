@@ -152,7 +152,28 @@ export async function saveSettings(
   });
 }
 
-export async function deleteShopData(shop: string): Promise<void> {
-  await prisma.alertSetting.deleteMany({ where: { shop } });
-  await prisma.alertRun.deleteMany({ where: { shop } });
+/**
+ * Removes everything this app holds for a shop: its settings, its audit trail,
+ * and its OAuth sessions.
+ *
+ * Shared by the `app/uninstalled` and `shop/redact` webhooks so the two can
+ * never fall out of step — a redaction request that missed a table would be a
+ * compliance failure.
+ */
+export async function purgeShopData(shop: string): Promise<{
+  settings: number;
+  runs: number;
+  sessions: number;
+}> {
+  const [settings, runs, sessions] = await prisma.$transaction([
+    prisma.alertSetting.deleteMany({ where: { shop } }),
+    prisma.alertRun.deleteMany({ where: { shop } }),
+    prisma.session.deleteMany({ where: { shop } }),
+  ]);
+
+  return {
+    settings: settings.count,
+    runs: runs.count,
+    sessions: sessions.count,
+  };
 }

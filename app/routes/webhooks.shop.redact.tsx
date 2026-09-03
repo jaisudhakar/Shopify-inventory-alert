@@ -3,11 +3,17 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { purgeShopData } from "../models/settings.server";
 
+/**
+ * Mandatory compliance webhook: 48 hours after a store uninstalls the app,
+ * Shopify asks for that shop's data to be erased.
+ *
+ * Unlike the customer topics this one has real work to do — the app holds the
+ * shop's alert settings, its digest history (which includes recipient email
+ * addresses the merchant entered), and its OAuth session.
+ */
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { shop, topic } = await authenticate.webhook(request);
 
-  // Shopify also sends shop/redact 48 hours later; both use the same purge, and
-  // deleting rows that are already gone is a no-op.
   const deleted = await purgeShopData(shop);
 
   console.info(
