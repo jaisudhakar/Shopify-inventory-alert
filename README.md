@@ -51,48 +51,130 @@ the requirement asks for, and it is what a buyer can actually act on.
 
 ---
 
-## Setup
+## Running it
 
-### 1. Install
+### What you need first
+
+1. A free **[Shopify Partner account](https://partners.shopify.com/signup)**.
+2. A **development store** (Partner Dashboard → Stores → Add store → Development
+   store). This is a free test store — use it, not a live one.
+3. **Node 20.10+**. Check with `node -v`.
+
+You do *not* need an email provider to get started — see step 4.
+
+---
+
+### Step 1 — Install and set up the database
 
 ```bash
+git clone https://github.com/jaisudhakar/Shopify-inventory-alert.git
+cd Shopify-inventory-alert
+git checkout claude/shopify-inventory-alert-app-yco983
+
 npm install
 cp .env.example .env
+npm run setup:dev      # generates the Prisma client and creates the SQLite database
 ```
 
-### 2. Configure
+### Step 2 — Create the app in your Partner account
 
-Fill in `.env`. The only values you must set to send real email are a provider's
-credentials and `EMAIL_FROM`; everything else has a working default.
+```bash
+npm run config:link
+```
+
+This is interactive. It logs you into Shopify, asks whether to create a new app
+or link an existing one (choose **Create a new app**), and then writes your
+`client_id` into `shopify.app.toml` for you.
+
+### Step 3 — Start it
+
+```bash
+npm run dev
+```
+
+The Shopify CLI opens a tunnel, injects `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET`
+/ `SHOPIFY_APP_URL` for you, and prints an install link. Press `p` to open it,
+pick your development store, and click **Install**.
+
+The app opens inside the Shopify admin. On install it seeds itself with a
+threshold of **10**, the store owner's email as the recipient, and your store's
+own timezone.
+
+### Step 4 — See the emails
+
+Straight after install the app runs in **`console` mode**: nothing is sent, the
+digest is printed to the terminal running `npm run dev`. Both the Overview and
+Settings pages tell you this is happening.
+
+Click **Send digest now** on the Overview page and the email appears in your
+terminal — subject line, product list, quantities and all. That is the fastest
+way to confirm the whole thing works.
+
+**To send real email**, put credentials in `.env` and restart. Any one of these
+is enough:
+
+```bash
+# Option A — any SMTP server (Gmail, Mailgun, Postmark, Amazon SES, ...)
+EMAIL_FROM="Inventory Alerts <alerts@your-domain.com>"
+SMTP_HOST=smtp.your-provider.com
+SMTP_PORT=587
+SMTP_USER=your-username
+SMTP_PASS=your-password
+
+# Option B — Resend
+EMAIL_FROM="Inventory Alerts <alerts@your-domain.com>"
+RESEND_API_KEY=re_...
+
+# Option C — SendGrid
+EMAIL_FROM="Inventory Alerts <alerts@your-domain.com>"
+SENDGRID_API_KEY=SG....
+```
+
+The Settings page shows which provider is active and warns you if none is.
+
+### Step 5 — Test the morning schedule without waiting until morning
+
+Set the send time to a few minutes from now on the Settings page. The scheduler
+ticks every 5 minutes, so the digest arrives on the next tick after that time.
+
+To trigger it immediately instead, add `CRON_SECRET=some-secret` to `.env`,
+restart, and run:
+
+```bash
+curl -X POST "http://localhost:3000/api/cron/daily?shop=YOUR-STORE.myshopify.com" \
+     -H "Authorization: Bearer some-secret"
+```
+
+Every attempt — sent, skipped, or failed — is recorded on the **History** page
+with the reason, so you can always see what happened.
+
+---
+
+### Running without a Shopify store
+
+The logic is fully testable on its own, no store and no mail server required:
+
+```bash
+npm test        # 63 tests
+npm run typecheck
+npm run build
+```
+
+---
+
+## Environment variables
 
 | Variable | Purpose |
 | --- | --- |
-| `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` | From the Partner Dashboard. `shopify app dev` injects these locally. |
+| `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` | From the Partner Dashboard. `npm run dev` injects these for you locally; set them explicitly in production. |
 | `SHOPIFY_APP_URL` | Public HTTPS URL of the app. Used for OAuth and for the settings link in the email. |
 | `SCOPES` | `read_products,read_inventory,read_locations` |
 | `DATABASE_URL` | SQLite by default (`file:./prisma/dev.sqlite`). |
 | `EMAIL_PROVIDER` | `smtp`, `resend`, `sendgrid`, or `console`. Auto-detected from whichever credentials are present. |
 | `EMAIL_FROM` | e.g. `Inventory Alerts <alerts@your-domain.com>` |
 | `ENABLE_SCHEDULER` | `true` (default) runs the digest in-process. Set `false` to drive it externally — see below. |
+| `SCHEDULER_CRON` | How often to check for due shops. Defaults to `*/5 * * * *`. |
 | `CRON_SECRET` | Bearer token protecting `/api/cron/daily`. |
-
-With no email credentials at all the app runs in **`console` mode**: the digest
-is printed to the server log instead of sent, and both the Overview and Settings
-pages say so. That makes the whole flow testable before you have a mail provider.
-
-### 3. Database
-
-```bash
-npx prisma generate
-npx prisma migrate deploy
-```
-
-### 4. Run
-
-```bash
-npm run config:link   # once, to bind shopify.app.toml to your Partner app
-npm run dev           # shopify app dev — tunnels and installs on a dev store
-```
 
 ---
 
