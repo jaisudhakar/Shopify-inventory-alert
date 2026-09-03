@@ -1,0 +1,93 @@
+// Prisma schema for the Inventory Alert Shopify app.
+//
+// SQLite is the default so the app runs with zero infrastructure. For a hosted
+// deployment switch `provider` to "postgresql" (or "mysql") and point
+// DATABASE_URL at the managed database — no model changes are required.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// OAuth sessions, written by @shopify/shopify-app-session-storage-prisma.
+/// The scheduled job reuses the offline session stored here to call the Admin
+/// API while nobody is logged into the embedded app.
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+
+  @@index([shop])
+}
+
+/// One row per shop holding everything the merchant configures in the admin UI.
+model AlertSetting {
+  id      Int     @id @default(autoincrement())
+  shop    String  @unique
+  enabled Boolean @default(true)
+
+  /// Alert when a variant's available quantity is <= this number. Default 10.
+  threshold Int @default(10)
+
+  /// Comma-separated recipient list. Seeded with the store owner's email on install.
+  recipients String @default("")
+
+  /// Local time of day the digest is sent, in `timezone`.
+  sendHour   Int    @default(8)
+  sendMinute Int    @default(0)
+  /// IANA timezone, seeded from the shop's own timezone on install.
+  timezone   String @default("UTC")
+
+  /// Variants whose inventory Shopify does not track report a quantity of 0.
+  /// They are excluded by default so the digest is not flooded with them.
+  includeUntracked Boolean @default(false)
+  /// Only report variants belonging to ACTIVE products.
+  onlyActiveProducts Boolean @default(true)
+  /// Skip the email entirely on days when nothing is low.
+  skipWhenEmpty Boolean @default(true)
+
+  /// Local calendar date ("YYYY-MM-DD") of the last scheduled send. Used to make
+  /// the scheduler idempotent, so a restart cannot send the digest twice.
+  lastSentLocalDate String?
+  lastRunAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Audit trail of every digest attempt, shown on the History page.
+model AlertRun {
+  id    Int    @id @default(autoincrement())
+  shop  String
+  /// "scheduled" | "manual" | "cron" | "test"
+  trigger String
+  /// "sent" | "skipped" | "failed"
+  status  String
+
+  threshold  Int
+  itemCount  Int    @default(0)
+  recipients String @default("")
+  message    String?
+  /// JSON snapshot of the low-stock rows included in the email.
+  payload    String?
+
+  runAt DateTime @default(now())
+
+  @@index([shop, runAt])
+}

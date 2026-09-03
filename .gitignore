@@ -1,0 +1,23 @@
+node_modules
+/.cache
+/build
+/public/build
+.env
+.env.*
+!.env.example
+
+# Prisma / SQLite
+*.sqlite
+*.sqlite-journal
+*.db
+prisma/*.sqlite*
+
+# Shopify CLI
+.shopify
+/extensions/*/dist
+
+# Editors & OS
+.DS_Store
+.idea
+.vscode
+*.log

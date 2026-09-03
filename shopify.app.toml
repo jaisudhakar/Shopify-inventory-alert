@@ -1,0 +1,40 @@
+# Shopify app configuration.
+# Run `npm run config:link` to bind this file to an app in your Partner account —
+# that fills in `client_id` and rewrites `application_url` for you.
+
+name = "inventory-alert"
+handle = "inventory-alert"
+client_id = ""
+application_url = "https://example.com"
+embedded = true
+
+[access_scopes]
+# read_products  — product titles, handles and status for the digest
+# read_inventory — the available quantity that the threshold is compared against
+# read_locations — per-location breakdown in the email
+scopes = "read_products,read_inventory,read_locations"
+
+[auth]
+redirect_urls = [
+  "https://example.com/auth/callback",
+  "https://example.com/auth/shopify/callback",
+  "https://example.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2026-07"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+[pos]
+embedded = false
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
